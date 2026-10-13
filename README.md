@@ -66,11 +66,18 @@ Summary: 17 finding(s): 3 critical, 9 high, 5 medium
 ## GitHub Action
 
 ```yaml
-- uses: actions/checkout@v4
-- run: python -m mcpaudit scan . -f sarif -o mcpaudit.sarif --fail-on none
-- uses: github/codeql-action/upload-sarif@v3
-  with: { sarif_file: mcpaudit.sarif }
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - run: pip install git+https://github.com/ismirhas/mcpaudit.git
+  - run: mcpaudit scan . -f sarif -o mcpaudit.sarif --fail-on none
+  - uses: github/codeql-action/upload-sarif@v3
+    with: { sarif_file: mcpaudit.sarif }
 ```
+
+Note: `scan .` exits with code 2 if the repository contains no MCP config file.
 
 ## Limitations
 
