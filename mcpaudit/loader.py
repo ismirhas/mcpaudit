@@ -109,13 +109,22 @@ def default_locations(cwd=None, home=None, env=None, system=None) -> list[Path]:
         home / ".codeium" / "windsurf" / "mcp_config.json",
     ]
     if system == "darwin":
-        locs.append(home / "Library/Application Support/Claude/claude_desktop_config.json")
+        support = home / "Library/Application Support"
+        locs += [support / "Claude/claude_desktop_config.json", support / "Code/User/mcp.json"]
     elif system.startswith("win"):
-        appdata = env.get("APPDATA")
+        appdata, local = env.get("APPDATA"), env.get("LOCALAPPDATA")
         if appdata:
-            locs.append(Path(appdata) / "Claude" / "claude_desktop_config.json")
+            locs += [Path(appdata) / "Claude" / "claude_desktop_config.json",
+                     Path(appdata) / "Code" / "User" / "mcp.json"]
+        if local:
+            # Microsoft Store (MSIX) installs keep per-app data under Packages.
+            try:
+                for pkg in sorted((Path(local) / "Packages").glob("Claude_*")):
+                    locs.append(pkg / "LocalCache" / "Roaming" / "Claude" / "claude_desktop_config.json")
+            except OSError:
+                pass
     else:
-        locs.append(home / ".config/Claude/claude_desktop_config.json")
+        locs += [home / ".config/Claude/claude_desktop_config.json", home / ".config/Code/User/mcp.json"]
     return list(dict.fromkeys(locs))
 
 
