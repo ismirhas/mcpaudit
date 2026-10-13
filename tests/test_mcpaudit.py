@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from mcpaudit.cli import main
-from mcpaudit.loader import load_file, strip_jsonc
+from mcpaudit.loader import default_locations, load_file, strip_jsonc
 from mcpaudit.model import ScanResult
 from mcpaudit.report import render_json, render_sarif, render_text
 from mcpaudit.rules import RULES, audit_file
@@ -179,6 +179,24 @@ class LoaderTests(unittest.TestCase):
 
     def test_strip_jsonc_keeps_strings(self):
         self.assertEqual(json.loads(strip_jsonc('{"u": "http://x/*y*/"}')), {"u": "http://x/*y*/"})
+
+
+class DiscoveryTests(unittest.TestCase):
+    def test_windows_locations_include_store_install_and_vscode_user(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            (d / "local" / "Packages" / "Claude_abc123").mkdir(parents=True)
+            locs = default_locations(cwd=d / "c", home=d / "h",
+                                     env={"APPDATA": str(d / "roam"), "LOCALAPPDATA": str(d / "local")},
+                                     system="win32")
+            self.assertIn(d / "roam" / "Code" / "User" / "mcp.json", locs)
+            self.assertIn(d / "roam" / "Claude" / "claude_desktop_config.json", locs)
+            self.assertIn(d / "local" / "Packages" / "Claude_abc123" / "LocalCache" / "Roaming"
+                          / "Claude" / "claude_desktop_config.json", locs)
+
+    def test_windows_without_localappdata_does_not_crash(self):
+        locs = default_locations(cwd="c", home="h", env={}, system="win32")
+        self.assertTrue(locs)
 
 
 class DemoAndCliTests(unittest.TestCase):
